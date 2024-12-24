@@ -1,29 +1,46 @@
-import com.google.gson.Gson;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class MoneyConverter {
     public static void main(String[] args) {
-        Gson gson = new Gson();
+        try {
+            // Crear el cliente HTTP
+            HttpClient client = HttpClient.newHttpClient();
 
-        // Ejemplo: Convertir un objeto Java a JSON
-        Conversor conversor = new Conversor("USD", "EUR", 1.2);
-        String json = gson.toJson(conversor);
-        System.out.println("JSON generado: " + json);
+            // URL de la API con tu API Key
+            String apiKey = "ce19a254375356b26c0fd8c0";
+            String url = "https://v6.exchangerate-api.com/v6/" + apiKey + "/latest/USD";
 
-        // Ejemplo: Convertir JSON a un objeto Java
-        String jsonString = "{\"from\":\"USD\",\"to\":\"EUR\",\"rate\":1.2}";
-        Conversor conversor2 = gson.fromJson(jsonString, Conversor.class);
-        System.out.println("Conversión: " + conversor2.from + " -> " + conversor2.to + " a tasa " + conversor2.rate);
-    }
+            // Crear la solicitud HTTP
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
 
-    static class Conversor {
-        String from;
-        String to;
-        double rate;
+            // Enviar la solicitud y obtener la respuesta
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        Conversor(String from, String to, double rate) {
-            this.from = from;
-            this.to = to;
-            this.rate = rate;
+            // Mostrar la respuesta JSON completa (para depuración)
+            System.out.println("Respuesta completa:");
+            System.out.println(response.body());
+
+            // Parsear la respuesta JSON
+            JsonObject jsonResponse = JsonParser.parseString(response.body()).getAsJsonObject();
+
+            // Extraer las tasas de cambio
+            JsonObject conversionRates = jsonResponse.getAsJsonObject("conversion_rates");
+            double tasaEuro = conversionRates.get("EUR").getAsDouble();
+            double tasaVes = conversionRates.get("VES").getAsDouble();
+
+            // Mostrar tasas de cambio específicas
+            System.out.println("\nTasa de cambio de USD a EUR: " + tasaEuro);
+            System.out.println("Tasa de cambio de USD a VES: " + tasaVes);
+        } catch (Exception e) {
+            System.out.println("Error al consumir la API: " + e.getMessage());
         }
     }
 }
