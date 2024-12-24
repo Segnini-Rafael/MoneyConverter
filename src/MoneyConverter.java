@@ -1,4 +1,12 @@
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import java.util.Scanner;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
 
 public class MoneyConverter {
     public static void main(String[] args) {
@@ -26,6 +34,39 @@ public class MoneyConverter {
 
         System.out.println("Procesando conversión...");
 
-        // Aquí llamaremos a la lógica de conversión.
+        try {
+            // Crear cliente y solicitud
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://v6.exchangerate-api.com/v6/ce19a254375356b26c0fd8c0/latest/USD"))
+                    .GET()
+                    .build();
+
+            // Obtener respuesta
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // Analizar JSON
+            Gson gson = new Gson();
+            JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
+
+            // Extraer tasas de cambio
+            JsonObject rates = jsonObject.getAsJsonObject("conversion_rates");
+            double tasaPEN = rates.get("PEN").getAsDouble();
+            double tasaCLP = rates.get("CLP").getAsDouble();
+            double tasaUSD = rates.get("USD").getAsDouble();
+            double tasaVES = rates.get("VES").getAsDouble();
+            double tasaEUR = rates.get("EUR").getAsDouble();
+
+            // Imprimir tasas de cambio
+            System.out.println("Tasa de cambio de USD a PEN (Perú): " + tasaPEN);
+            System.out.println("Tasa de cambio de USD a CLP (Chile): " + tasaCLP);
+            System.out.println("Tasa de cambio de USD a USD (EE.UU.): " + tasaUSD);
+            System.out.println("Tasa de cambio de USD a VES (Venezuela): " + tasaVES);
+            System.out.println("Tasa de cambio de USD a EUR (Eurozona): " + tasaEUR);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 }
