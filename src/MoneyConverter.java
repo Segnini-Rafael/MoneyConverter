@@ -1,72 +1,98 @@
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
-import java.util.Scanner;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.URI;
+import java.util.Scanner;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class MoneyConverter {
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-
-        System.out.println("Bienvenido al Conversor de Monedas");
-        System.out.println("Seleccione la moneda de origen:");
-        System.out.println("1. USD (Dólar estadounidense)");
-        System.out.println("2. PEN (Sol peruano)");
-        System.out.println("3. CLP (Peso chileno)");
-        System.out.println("4. VES (Bolívar venezolano)");
-        System.out.println("5. EUR (Euro)");
-        int monedaOrigen = scanner.nextInt();
-
-        System.out.println("Seleccione la moneda de destino:");
-        System.out.println("1. USD (Dólar estadounidense)");
-        System.out.println("2. PEN (Sol peruano)");
-        System.out.println("3. CLP (Peso chileno)");
-        System.out.println("4. VES (Bolívar venezolano)");
-        System.out.println("5. EUR (Euro)");
-        int monedaDestino = scanner.nextInt();
-
-        System.out.println("Ingrese la cantidad a convertir:");
-        double cantidad = scanner.nextDouble();
-
-        System.out.println("Procesando conversión...");
-
         try {
-            // Crear cliente y solicitud
+            // URL de la API
+            String url = "https://v6.exchangerate-api.com/v6/ce19a254375356b26c0fd8c0/latest/USD";
+
+            // Cliente y solicitud
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://v6.exchangerate-api.com/v6/ce19a254375356b26c0fd8c0/latest/USD"))
+                    .uri(URI.create(url))
                     .GET()
                     .build();
 
-            // Obtener respuesta
+            // Respuesta de la API
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            String jsonResponse = response.body();
 
-            // Analizar JSON
-            Gson gson = new Gson();
-            JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
+            // Parseando el JSON usando Gson
+            JsonObject root = JsonParser.parseString(jsonResponse).getAsJsonObject();
+            JsonObject conversionRates = root.getAsJsonObject("conversion_rates");
 
-            // Extraer tasas de cambio
-            JsonObject rates = jsonObject.getAsJsonObject("conversion_rates");
-            double tasaPEN = rates.get("PEN").getAsDouble();
-            double tasaCLP = rates.get("CLP").getAsDouble();
-            double tasaUSD = rates.get("USD").getAsDouble();
-            double tasaVES = rates.get("VES").getAsDouble();
-            double tasaEUR = rates.get("EUR").getAsDouble();
+            // Monedas disponibles
+            String[] monedas = {"USD", "PEN", "CLP", "VES", "EUR", "JPY"};
 
-            // Imprimir tasas de cambio
-            System.out.println("Tasa de cambio de USD a PEN (Perú): " + tasaPEN);
-            System.out.println("Tasa de cambio de USD a CLP (Chile): " + tasaCLP);
-            System.out.println("Tasa de cambio de USD a USD (EE.UU.): " + tasaUSD);
-            System.out.println("Tasa de cambio de USD a VES (Venezuela): " + tasaVES);
-            System.out.println("Tasa de cambio de USD a EUR (Eurozona): " + tasaEUR);
+            // Interacción con el usuario
+            Scanner scanner = new Scanner(System.in);
+            boolean continuar = true;
+
+            while (continuar) {
+                System.out.println("\n=== Convertidor de Monedas ===");
+                System.out.println("1. Realizar una conversión");
+                System.out.println("2. Salir");
+                System.out.print("Selecciona una opción: ");
+                int opcion = scanner.nextInt();
+                scanner.nextLine(); // Limpiar el buffer
+
+                if (opcion == 1) {
+                    // Mostrar monedas disponibles
+                    System.out.println("\nMonedas disponibles:");
+                    for (int i = 0; i < monedas.length; i++) {
+                        System.out.println((i + 1) + ". " + monedas[i]);
+                    }
+
+                    // Selección de moneda origen
+                    System.out.print("Selecciona la moneda de origen (número): ");
+                    int indiceOrigen = scanner.nextInt() - 1;
+                    scanner.nextLine(); // Limpiar el buffer
+
+                    // Selección de moneda destino
+                    System.out.print("Selecciona la moneda de destino (número): ");
+                    int indiceDestino = scanner.nextInt() - 1;
+                    scanner.nextLine(); // Limpiar el buffer
+
+                    // Validar selección
+                    if (indiceOrigen >= 0 && indiceOrigen < monedas.length &&
+                            indiceDestino >= 0 && indiceDestino < monedas.length) {
+                        String monedaOrigen = monedas[indiceOrigen];
+                        String monedaDestino = monedas[indiceDestino];
+
+                        // Ingresar cantidad
+                        System.out.print("Ingresa la cantidad a convertir: ");
+                        double cantidad = scanner.nextDouble();
+                        scanner.nextLine(); // Limpiar el buffer
+
+                        // Obtener tasas de conversión
+                        double tasaOrigen = conversionRates.get(monedaOrigen).getAsDouble();
+                        double tasaDestino = conversionRates.get(monedaDestino).getAsDouble();
+
+                        // Calcular conversión
+                        double resultado = (cantidad / tasaOrigen) * tasaDestino;
+
+                        // Mostrar resultado
+                        System.out.printf("La conversión de %.2f %s a %s es: %.2f %s\n",
+                                cantidad, monedaOrigen, monedaDestino, resultado, monedaDestino);
+                    } else {
+                        System.out.println("Selección inválida. Intenta de nuevo.");
+                    }
+                } else if (opcion == 2) {
+                    System.out.println("Gracias por usar el convertidor de monedas. ¡Adiós!");
+                    continuar = false;
+                } else {
+                    System.out.println("Opción no válida. Intenta de nuevo.");
+                }
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 }
